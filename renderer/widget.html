@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'">
+<style>:root{color-scheme:light dark}html,body{margin:0;background:transparent}</style>
+</head>
+<body>
+<script>
+// Sandboxed host for interactive views Claude writes (```widget blocks).
+// No network, no access to the chat window; it only receives the HTML and reports its height.
+(function () {
+  var done = false;
+  var CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; form-action \'none\'">';
+  var BASE = '<style>:root{color-scheme:light dark}html{overflow:hidden}body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif}</style>';
+  var TAIL = '<script>(function(){function s(){parent.postMessage({type:"widget-height",h:document.body.scrollHeight},"*")}addEventListener("load",s);addEventListener("resize",s);if(window.ResizeObserver)new ResizeObserver(s).observe(document.body);setTimeout(s,50);})();<\/script>';
+  addEventListener('message', function (e) {
+    var d = e.data;
+    if (done || e.source !== parent || !d || d.type !== 'widget-html' || typeof d.html !== 'string') return;
+    done = true;
+    document.open();
+    document.write('<!DOCTYPE html>' + CSP + BASE + d.html + TAIL);
+    document.close();
+  });
+})();
+</script>
+</body>
+</html>

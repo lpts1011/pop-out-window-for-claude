@@ -1,0 +1,15 @@
+{
+  "name": "claude-chatbar",
+  "version": "0.1.0",
+  "description": "Pop-out window for Claude: a floating, always-on-top chat window for macOS, powered by your Claude Code login.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-app": "bash build-app.sh",
+    "test": "node test/runner.test.js && node test/markdown.test.js && node test/handoff.test.js && node test/chats.test.js && node test/claudeweb.test.js && node test/find.test.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+*.bad
+.env
+# Bring your own logo; none is shipped with this project.
+renderer/logo.png

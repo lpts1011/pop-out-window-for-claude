@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; font-src 'self' file:; frame-src 'self'">
+  <title>Claude chat bar</title>
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-pin" viewBox="0 0 20 20"><path d="M7.5 3h5M8.5 3v5.2L5.8 11v1.5h8.4V11l-2.7-2.8V3M10 12.5V17"/></symbol>
+      <symbol id="i-history" viewBox="0 0 20 20"><path d="M3.6 10a6.4 6.4 0 1 0 1.9-4.5L3.5 7.4M3.5 3.8v3.6h3.6M10 6.6V10l2.4 1.5"/></symbol>
+      <symbol id="i-new" viewBox="0 0 20 20"><path d="M9.5 3.8H5.2a1.4 1.4 0 0 0-1.4 1.4v9.6c0 .8.6 1.4 1.4 1.4h9.6c.8 0 1.4-.6 1.4-1.4v-4.3M14.6 3.1a1.5 1.5 0 0 1 2.2 2.2L10.2 12l-2.9.7.7-2.9 6.6-6.7z"/></symbol>
+      <symbol id="i-more" viewBox="0 0 20 20"><path d="M4.5 10h.01M10 10h.01M15.5 10h.01" stroke-width="2.4"/></symbol>
+      <symbol id="i-x" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></symbol>
+      <symbol id="i-out" viewBox="0 0 20 20"><path d="M6.5 13.5l7-7M7.5 6.5h6v6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.8"/><path d="M3.2 10h13.6M10 3.2c2 1.9 3 4.2 3 6.8s-1 4.9-3 6.8c-2-1.9-3-4.2-3-6.8s1-4.9 3-6.8z"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 20 20"><path d="M7.5 3v4M12.5 3v4M5.5 7h9v2.5a4.5 4.5 0 0 1-9 0V7zM10 14v3"/></symbol>
+      <symbol id="i-clip" viewBox="0 0 20 20"><path d="M16 9.5l-6.2 6.2a3.8 3.8 0 0 1-5.4-5.4l6.5-6.5a2.5 2.5 0 0 1 3.6 3.6l-6.4 6.4a1.2 1.2 0 0 1-1.8-1.8l5.9-5.8"/></symbol>
+      <symbol id="i-shot" viewBox="0 0 20 20"><path d="M3.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2M13 3.5h2A1.5 1.5 0 0 1 16.5 5v2M16.5 13v2a1.5 1.5 0 0 1-1.5 1.5h-2M7 16.5H5A1.5 1.5 0 0 1 3.5 15v-2"/><circle cx="10" cy="10" r="2.4"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 20 20"><rect x="7" y="7" width="9.5" height="9.5" rx="1.6"/><path d="M13 7V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v6.5A1.5 1.5 0 0 0 5 13h2"/></symbol>
+      <symbol id="i-retry" viewBox="0 0 20 20"><path d="M16.4 10a6.4 6.4 0 1 1-1.9-4.5l2 1.9M16.5 3.8v3.6h-3.6"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 20 20"><path d="M12.8 4.2a1.7 1.7 0 0 1 2.4 2.4l-8.5 8.6-3.200.8.8-3.2 8.5-8.6z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 20 20"><path d="M4.5 10.5l3.7 3.7 7.3-8"/></symbol>
+      <symbol id="i-down" viewBox="0 0 20 20"><path d="M6 8l4 4 4-4"/></symbol>
+      <symbol id="i-up" viewBox="0 0 20 20"><path d="M10 15.5v-11M5.5 9L10 4.5 14.5 9"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 20 20"><rect x="6" y="6" width="8" height="8" rx="1.2" fill="currentColor"/></symbol>
+      <symbol id="i-file" viewBox="0 0 20 20"><path d="M11.5 3H6a1.5 1.5 0 0 0-1.5 1.5v11A1.5 1.5 0 0 0 6 17h8a1.5 1.5 0 0 0 1.5-1.5V7l-4-4zM11.5 3v4h4"/></symbol>
+    </defs>
+  </svg>
+  <div id="card">
+    <div id="top" class="drag">
+      <img id="logo" src="logo.png" alt="">
+      <div id="engine" aria-label="Chat engine">
+        <button data-engine="quick" class="on" title="Quick: the bar's own fast chat">Quick</button>
+        <button data-engine="web" title="Claude.ai: real chats that sync with the Claude app and your phone">Claude.ai</button>
+      </div>
+      <span id="title"></span>
+      <span id="notice"></span>
+      <button id="pin" class="icon on" title="Keep on top"><svg class="ic"><use href="#i-pin"/></svg></button>
+      <button id="hist" class="icon" title="History"><svg class="ic"><use href="#i-history"/></svg></button>
+      <button id="new" class="icon" title="New chat (Cmd+N)"><svg class="ic"><use href="#i-new"/></svg></button>
+      <button id="open" class="icon" title="Open this chat in the Claude app"><svg class="ic"><use href="#i-out"/></svg></button>
+      <button id="more" class="icon" title="More"><svg class="ic"><use href="#i-more"/></svg></button>
+      <button id="close" class="icon" title="Hide (Esc)"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="menu" class="pop top" hidden>
+      <button id="m-settings">Settings<small>About you, shortcuts</small></button>
+      <button id="m-chat">Move to a Claude.ai chat<small>Opens a synced chat with this conversation in the box</small></button>
+      <button id="m-code">Continue in Claude app (Code tab)<small>Same conversation; Claude remembers everything</small></button>
+    </div>
+    <div id="panel"></div>
+    <div id="log" aria-live="polite"></div>
+    <div id="composer">
+      <div id="chips"></div>
+      <div id="editnote">Editing your last message. Enter to resend, Esc to cancel</div>
+      <textarea id="input" rows="1" placeholder="How can I help you today?" spellcheck="true" autofocus></textarea>
+      <div id="tools">
+        <button id="plus" class="tool" title="Add files, screenshot, connectors"><svg class="ic"><use href="#i-plus"/></svg></button>
+        <button id="web" class="tool on" title="Web search"><svg class="ic"><use href="#i-globe"/></svg></button>
+        <button id="conn" class="tool on" title="Reading your Gmail and Google files. Click to stop"><svg class="ic"><use href="#i-plug"/></svg></button>
+        <span class="spacer"></span>
+        <span id="usage"></span>
+        <button id="modelbtn" title="Model and effort"><span id="modelname">Default</span><svg class="ic sm"><use href="#i-down"/></svg></button>
+        <button id="send" title="Send (Enter)"><svg class="ic"><use href="#i-up"/></svg></button>
+      </div>
+    </div>
+    <div id="plusmenu" class="pop left" hidden>
+      <button id="p-file"><svg class="ic"><use href="#i-clip"/></svg>Add files<small>Images, PDFs, text and code</small></button>
+      <button id="p-shot"><svg class="ic"><use href="#i-shot"/></svg>Take a screenshot<small id="p-shot-key"></small></button>
+      <button id="p-conn"><svg class="ic"><use href="#i-plug"/></svg>Read my Gmail and Drive<small>Reading only. Claude can't send or change anything</small><svg class="ic tick"><use href="#i-check"/></svg></button>
+    </div>
+    <div id="modelmenu" class="pop right" hidden></div>
+    <input id="filepick" type="file" multiple hidden>
+  </div>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="markdown.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
