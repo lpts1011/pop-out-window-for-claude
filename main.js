@@ -304,6 +304,14 @@ function showBar() {
   const go = () => {
     if (!alive()) return;
     if (!win.isVisible()) restoreOrPosition();
+    if (process.platform === 'darwin') {
+      // hideBar() hides the whole app, so undo that first and take focus reliably. Without this
+      // the app could become active while its window never reached the screen.
+      app.show();
+      app.focus({ steal: true });
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+      applyLevel(); // after the line above, which can reset the level
+    }
     win.show();
     win.focus();
     applyTheme();

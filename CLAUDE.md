@@ -49,6 +49,7 @@ It has two engines, switched at the top left and saved as `engine`. **Quick** ru
 - Verify on a real Mac: staying above other apps' pop-out windows; the ↗ deep link to `claude://claude.ai/chat/<id>`; the screenshot hotkey pasting into the Claude.ai panel; "Continue in Claude app (Code tab)".
 - Thinking blocks are rendered if Claude Code streams them, but none appeared with Sonnet at high effort on 2.1.319.
 - Custom app icon.
+- Watch for: after hours of running, the hotkey once made the app active while its window never reached the screen (CGWindowList showed it not on screen). Not reproduced in a test app; root cause unknown. `showBar()` now calls `app.show()`, `app.focus({steal:true})` and re-applies all-workspaces and the level before showing. Whether this holds over long runs is not yet known.
 
 ## Testing the Claude.ai panel
 Never point an unpackaged Electron run (or any harness) at the real `userData`. Cookies are encrypted with a Keychain key tied to the app's name, so a run named "Electron" sees the panel as signed out and the site then replaces the stored login, which signs the panel out. Test against a fake local page by passing `base` to `createPane`. The `?q=` route has been used successfully on the real signed-in site. Typing long text with `execCommand('insertText')` and pasting a screenshot have only run against the fake page.
