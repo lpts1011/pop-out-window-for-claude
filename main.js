@@ -305,12 +305,15 @@ function showBar() {
     if (!alive()) return;
     if (!win.isVisible()) restoreOrPosition();
     if (process.platform === 'darwin') {
-      // hideBar() hides the whole app, so undo that first and take focus reliably. Without this
-      // the app could become active while its window never reached the screen.
-      app.show();
+      // The window can end up registered on only one Space (seen: a full-screen browser's Space).
+      // Then activating the app either switches you to that Space or shows nothing. So first make
+      // macOS register it on every Space again (off, then on), and only then activate the app.
+      const opts = { visibleOnFullScreen: true, skipTransformProcessType: true };
+      win.setVisibleOnAllWorkspaces(false, opts);
+      win.setVisibleOnAllWorkspaces(true, opts);
+      applyLevel(); // after the lines above, which can reset the level
+      app.show(); // hideBar() hides the whole app
       app.focus({ steal: true });
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-      applyLevel(); // after the line above, which can reset the level
     }
     win.show();
     win.focus();

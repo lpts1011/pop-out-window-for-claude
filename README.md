@@ -270,7 +270,7 @@ file or chats to a repository.
 | "There was an error logging you in" | Use "Continue with email", not Google |
 | The new build does not appear | An old copy is still running. Quit it from ✳ > Quit or run `pkill -f "Claude Bar"`, then rebuild |
 | The hotkey does nothing | Another app may own it. Change `shortcut` in the config file |
-| The hotkey only removes focus from your current window, and nothing appears | Choose ✳ > Quit, then open the app again |
+| The hotkey only removes focus from your current window, or switches you to another desktop or full-screen app | Update to the latest version. If it still happens, choose ✳ > Quit, then open the app again |
 | The screenshot hotkey fails | Turn on Screen Recording for Claude Bar in System Settings. After a rebuild, you may need to switch it off and on |
 | Claude.ai message stays in the box | Press Enter yourself. This can happen when the window cannot take focus |
 | Replies stop | Your plan or monthly credit may have run out. Hover over the usage figure to see when it resets |
