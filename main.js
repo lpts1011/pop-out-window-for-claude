@@ -145,6 +145,9 @@ function createWindow() {
     skipTaskbar: true,
     fullscreenable: false,
     alwaysOnTop: true,
+    // A panel takes the keyboard without making this app the active one (like Spotlight). macOS
+    // only switches Spaces when an app is activated, so the bar always opens where you are.
+    ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     vibrancy: 'under-window', // native macOS blur; follows light/dark and Reduce transparency
     visualEffectState: 'active',
     webPreferences: {
@@ -305,15 +308,13 @@ function showBar() {
     if (!alive()) return;
     if (!win.isVisible()) restoreOrPosition();
     if (process.platform === 'darwin') {
-      // The window can end up registered on only one Space (seen: a full-screen browser's Space).
-      // Then activating the app either switches you to that Space or shows nothing. So first make
-      // macOS register it on every Space again (off, then on), and only then activate the app.
+      // Never activate the app here (no app.focus): if the window is registered on another
+      // Space, activating would switch you to that Space. Re-register it on every Space instead.
       const opts = { visibleOnFullScreen: true, skipTransformProcessType: true };
       win.setVisibleOnAllWorkspaces(false, opts);
       win.setVisibleOnAllWorkspaces(true, opts);
       applyLevel(); // after the lines above, which can reset the level
-      app.show(); // hideBar() hides the whole app
-      app.focus({ steal: true });
+      if (app.isHidden()) app.show(); // a hidden app cannot show any window
     }
     win.show();
     win.focus();
@@ -328,9 +329,8 @@ function showBar() {
 function hideBar() {
   if (alive() && win.isVisible()) {
     lastBounds = win.getBounds();
-    win.hide();
+    win.hide(); // the app you were in never stopped being active, so it has the keyboard again
   }
-  if (process.platform === 'darwin') app.hide(); // hand focus back to the previous app
 }
 
 function toggleBar() {
