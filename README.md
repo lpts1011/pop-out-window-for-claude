@@ -135,7 +135,7 @@ for you to review and send. It is never sent automatically.
 | Cmd + N | New chat |
 | Esc | Hide (in Claude.ai mode, closes the site's open menu first) |
 | Option + Shift + S | Screenshot part of the screen and attach it |
-| Cmd + V | Paste an image or file (you can also drag one in) |
+| Cmd + V | Paste text, an image or a file, in both modes (you can also drag one in) |
 
 The default hotkey does not clash with the Claude desktop app's Option + Space.
 
@@ -157,6 +157,10 @@ any tool that is not on the known list is refused.
 **Copy, Retry and Edit.** Copy keeps Markdown and LaTeX so it pastes cleanly into notes. Retry under the last reply asks again
 and replaces that reply. Edit under your last message puts it back in the text box. Both fork the session from the earlier reply,
 so Claude forgets the old answer. Images are resent only while the window is still open, because saved chats keep only the image count.
+
+**A new chat after a break (Quick).** If you open the window more than 20 minutes after the last message or reply, Quick
+starts a new chat. The old one is in History, and text you typed but did not send stays in the box. Change the time with
+`idleNewChatMinutes`.
 
 **History.** Each chat is saved after every reply. Claude Code removes old sessions after about 30 days. Reopening an older chat
 still works, because the saved conversation is sent to a new session as text.
@@ -197,7 +201,8 @@ Choose ✳ > **Open config file**, edit `config.json`, then choose ✳ > **Reloa
 | `maxHeight` | `220` | Tallest the small bar grows while you type |
 | `chatHeight` | `520` | Chat window height |
 | `chatWidth` | `0` | 0 means the same as `width` |
-| `levelBoost` | `2147482631` | How far above the `screen-saver` window layer the window sits (1 to 2147482631) |
+| `levelBoost` | `2147482627` | How far above the `screen-saver` window layer the window sits (1 to 2147482631). The default stays just under input-method candidate windows |
+| `idleNewChatMinutes` | `20` | Quick: opening the window this long after the last message starts a new chat. 0 turns it off |
 
 An invalid config file is copied to `config.json.bad`, and defaults are used so the app still starts.
 
@@ -226,8 +231,9 @@ An invalid config file is copied to `config.json.bad`, and defaults are used so 
 - Claude gets no file or shell tools in this window. The only tools it can have are web search, page reading and the read-only
   connector tools.
 - The app is ad-hoc signed and not notarized. It is built on your own Mac, and macOS may show extra prompts.
-- The default window level is the highest macOS allows, which also places it above the screen-capture shield level. Lower
-  `levelBoost` if you do not want that. The window may be visible during screen sharing or recording.
+- The default window level is very high: above other apps' floating windows and full-screen apps, but a few levels under
+  the highest macOS allows, so input-method candidate windows are not covered while you type. Lower `levelBoost` if you
+  want it lower. The window may be visible during screen sharing or recording.
 
 **Stability**
 
@@ -271,7 +277,7 @@ file or chats to a repository.
 | The new build does not appear | An old copy is still running. Quit it from ✳ > Quit or run `pkill -f "Claude Bar"`, then rebuild |
 | The hotkey does nothing | Another app may own it. Change `shortcut` in the config file |
 | The hotkey only removes focus from your current window, or switches you to another desktop or full-screen app | Update to the latest version. If it still happens, choose ✳ > Quit, then open the app again |
-| The screenshot hotkey fails | Turn on Screen Recording for Claude Bar in System Settings. After a rebuild, you may need to switch it off and on |
+| The screenshot hotkey fails, or macOS keeps asking for Screen Recording although the switch is on | The switch belongs to an older build: each rebuild changes the ad-hoc signature. Run `tccutil reset ScreenCapture local.claude-chatbar` in Terminal, press the screenshot hotkey, turn the switch on again, then quit and reopen the app |
 | Claude.ai message stays in the box | Press Enter yourself. This can happen when the window cannot take focus |
 | Replies stop | Your plan or monthly credit may have run out. Hover over the usage figure to see when it resets |
 | An old chat restarts with less memory | Its Claude Code session expired, so the saved text was sent to a new session |

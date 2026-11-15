@@ -7,7 +7,7 @@ const path = require('path');
 const { ask } = require('./claude');
 const { buildHandoff } = require('./handoff');
 const { createStore, cleanMessages } = require('./chats');
-const { createPane } = require('./claudeweb');
+const { createPane, editKeys } = require('./claudeweb');
 
 const OLD_PROMPT = 'You are a quick-answer chat bar. Keep replies concise unless asked for detail.';
 const PROMPT_RULES =
@@ -28,7 +28,7 @@ const DEFAULT_PROMPT =
   'and answer in the language they write in. ' + PROMPT_RULES;
 
 const DEFAULTS = {
-  configVersion: 5,
+  configVersion: 6,
   // Option + Shift + Space (so it does not clash with Claude Desktop's Option + Space).
   shortcut: 'Alt+Shift+Space',
   screenshotShortcut: 'Alt+Shift+S', // drag over part of the screen and attach it
@@ -43,7 +43,11 @@ const DEFAULTS = {
   claudePath: '',
   systemPrompt: DEFAULT_PROMPT,
   width: 480,
-  levelBoost: 2147482631, // how far above the 'screen-saver' window layer (1000) the bar sits (1 to 2147482631)
+  // How far above the 'screen-saver' window layer (1000) the bar sits (1 to 2147482631). The default
+  // puts it at level 2147483627: above other apps' floating windows, but just below input-method
+  // candidate windows (seen at 2147483628 and 2147483629), so they are not covered while you type.
+  levelBoost: 2147482627,
+  idleNewChatMinutes: 20, // Quick: opening the bar this long after the last message starts a new chat (0 = never)
   anchor: 0.75, // the bar sits this far down the screen (0 = top, 1 = bottom)
   maxHeight: 220, // tallest the small bar grows while you type a long question
   chatHeight: 520, // fixed height of the chat window after your first message (drag to change)
@@ -78,7 +82,7 @@ function loadConfig() {
     const saved = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
     config = { ...DEFAULTS, ...saved };
     // A mistyped number here would otherwise stop the window from opening.
-    for (const k of ['width', 'maxHeight', 'chatHeight', 'chatWidth', 'anchor', 'levelBoost']) {
+    for (const k of ['width', 'maxHeight', 'chatHeight', 'chatWidth', 'anchor', 'levelBoost', 'idleNewChatMinutes']) {
       if (typeof config[k] !== 'number' || !Number.isFinite(config[k]) || config[k] < 0) config[k] = DEFAULTS[k];
     }
     if (config.width < 320) config.width = DEFAULTS.width;
@@ -86,7 +90,14 @@ function loadConfig() {
     if (config.chatWidth && config.chatWidth < 320) config.chatWidth = DEFAULTS.chatWidth;
     if (config.anchor > 1) config.anchor = DEFAULTS.anchor;
     if (config.engine !== 'quick' && config.engine !== 'web') config.engine = 'quick';
-    if ((saved.configVersion || 1) < DEFAULTS.configVersion) {
+    const from = saved.configVersion || 1;
+    // Version 6: the old default level covered input-method candidate windows.
+    if (from < 6 && config.levelBoost > DEFAULTS.levelBoost) config.levelBoost = DEFAULTS.levelBoost;
+    if (from < DEFAULTS.configVersion && from >= 5) {
+      config.configVersion = DEFAULTS.configVersion;
+      saveConfig();
+    }
+    if (from < 5) {
       // one-off upgrade from the older defaults
       if (saved.shortcut === undefined || saved.shortcut === 'Alt+Space') config.shortcut = DEFAULTS.shortcut;
       if (saved.width === undefined || saved.width === 640) config.width = DEFAULTS.width;
@@ -108,11 +119,11 @@ function loadConfig() {
 }
 
 // Put the bar on the 'screen-saver' layer plus `levelBoost`, so other floating windows
-// (for example ChatGPT's pop-out window) cannot cover it. At the default boost this is
-// level 2147483631 (kCGMaximumWindowLevel), the highest macOS allows.
+// (for example ChatGPT's pop-out window) cannot cover it. The highest macOS allows is level
+// 2147483631 (boost 2147482631); the default stays a few levels lower, under input methods.
 function applyLevel() {
   if (!alive()) return;
-  const boost = Math.max(1, Math.min(Math.round(Number(config.levelBoost) || 2147482631), 2147482631));
+  const boost = Math.max(1, Math.min(Math.round(Number(config.levelBoost) || DEFAULTS.levelBoost), 2147482631));
   try {
     win.setAlwaysOnTop(pinned, 'screen-saver', boost);
   } catch (_) {
@@ -173,6 +184,7 @@ function createWindow() {
     if (!paneShowing()) setMode('compact');
     win.reload();
   });
+  editKeys(win.webContents); // Cmd+V, C, X, A, Z
   win.webContents.on('did-finish-load', sendConfig);
   win.on('blur', () => setTimeout(raiseIfCovered, 60));
   win.on('show', () => { raiseIfCovered(); startKeepOnTop(); });
@@ -306,7 +318,10 @@ function showBar() {
   if (fresh) createWindow(); // recreate if it was ever destroyed
   const go = () => {
     if (!alive()) return;
-    if (!win.isVisible()) restoreOrPosition();
+    if (!win.isVisible()) {
+      restoreOrPosition();
+      startFreshIfIdle(); // after positioning: the small bar keeps the chat window's bottom edge
+    }
     if (process.platform === 'darwin') {
       // Never activate the app here (no app.focus): if the window is registered on another
       // Space, activating would switch you to that Space. Re-register it on every Space instead.
@@ -426,6 +441,16 @@ function createTray() {
   tray.on('click', toggleBar);
 }
 
+// Quick: when the bar is opened a while after the last message, start a new chat. The old one
+// is already saved in History.
+let lastQuick = 0; // when the open Quick chat last had a message or a reply
+function startFreshIfIdle() {
+  const minutes = Number(config.idleNewChatMinutes);
+  if (!(minutes > 0) || !lastQuick || running || config.engine !== 'quick') return;
+  if (Date.now() - lastQuick < minutes * 60000) return;
+  newChat();
+}
+
 function newChat() {
   if (config.engine === 'web') { // the Quick chat on screen is left alone
     webOpen = false;
@@ -437,6 +462,7 @@ function newChat() {
   running = null;
   sessionId = null;
   chatId = null;
+  lastQuick = 0;
   setMode('compact');
   sendToWin('reset');
 }
@@ -470,6 +496,7 @@ ipcMain.handle('set-engine', (_e, engine) => {
   if (engine !== 'quick' && engine !== 'web') return false;
   config.engine = engine;
   saveConfig();
+  if (engine === 'quick') startFreshIfIdle(); // the Quick chat may have gone stale while Claude.ai was showing
   if (engine === 'web' && mode === 'chat' && !webOpen) openWeb(() => pane.open('/new'));
   layoutPane();
   if (paneShowing()) pane.focus();
@@ -525,6 +552,7 @@ ipcMain.on('ask', (_e, payload) => {
   const prior = Array.isArray(payload?.prior) ? payload.prior : [];
   const resumeAt = typeof payload?.resumeAt === 'string' && /^[0-9a-f-]{36}$/i.test(payload.resumeAt) ? payload.resumeAt : null;
   if (running) running.cancel();
+  lastQuick = Date.now();
   // fresh = regenerate/edit with no earlier reply to fork from: start a new session
   if (payload?.fresh) sessionId = null;
   const start = (text, retried) => {
@@ -543,7 +571,7 @@ ipcMain.on('ask', (_e, payload) => {
         onThinking: (t) => sendToWin('thinking', t),
         onUsage: (u) => { usage = u; sendToWin('usage', u); },
         onSession: (id) => (sessionId = id),
-        onDone: (r) => { running = null; sendToWin('done', { uuid: r.uuid || null }); },
+        onDone: (r) => { running = null; lastQuick = Date.now(); sendToWin('done', { uuid: r.uuid || null }); },
         onError: (m) => {
           // The old session is gone (Claude Code deletes old ones): carry on in a new session
           // with the conversation so far as text.
@@ -581,6 +609,7 @@ ipcMain.handle('open-chat', (_e, id) => {
   running = null;
   chatId = chat.id;
   sessionId = chat.sessionId;
+  lastQuick = Date.now();
   setMode('chat');
   return { messages: chat.messages, hasSession: !!sessionId };
 });

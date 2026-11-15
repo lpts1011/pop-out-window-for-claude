@@ -25,6 +25,25 @@ function openOutside(url) {
   if (/^https?:/.test(url)) shell.openExternal(url);
 }
 
+// The bar is a panel that never makes this app the active one, so the Edit menu's shortcuts
+// (Cmd+V and friends) do not reach it. Handle them on the page itself.
+const EDIT_KEYS = { v: 'paste', c: 'copy', x: 'cut', a: 'selectAll', z: 'undo' };
+function editKeys(wc) {
+  wc.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown' || !input.meta || input.control || input.alt) return;
+    const key = String(input.key).toLowerCase();
+    let action = EDIT_KEYS[key];
+    if (!action) return;
+    if (input.shift) {
+      if (key === 'z') action = 'redo';
+      else if (key === 'v') action = 'pasteAndMatchStyle';
+      else return;
+    }
+    e.preventDefault(); // never twice, if the menu does get the key
+    wc[action]();
+  });
+}
+
 // Pressing Enter only when the box holds what was asked for: compare the start, ignoring spaces.
 const compact = (s) => String(s).replace(/\s+/g, '').slice(0, 24);
 
@@ -62,6 +81,7 @@ function createPane({ base = HOME, partition = 'persist:claudeai', radius = 14, 
     wc.on('did-navigate-in-page', report);
     wc.on('page-title-updated', report);
     wc.on('render-process-gone', () => { if (view && !wc.isDestroyed()) wc.reload(); });
+    editKeys(wc);
     wc.on('before-input-event', (e, input) => {
       if (input.type !== 'keyDown') return;
       if (input.meta && !input.shift && input.key.toLowerCase() === 'n') { e.preventDefault(); if (onNew) onNew(); return; }
@@ -193,4 +213,4 @@ function createPane({ base = HOME, partition = 'persist:claudeai', radius = 14, 
   };
 }
 
-module.exports = { createPane, isPanelUrl };
+module.exports = { createPane, isPanelUrl, editKeys };
