@@ -7,6 +7,7 @@ It has two engines, switched at the top left and saved as `engine`. **Quick** ru
 - `npm install` then `npm start`: run from Terminal (dev).
 - `npm test`: runner, markdown, handoff, chats, claudeweb and find tests. Plain Node; `claudeweb` needs `electron` to be installed but does not launch it.
 - `npm run build-app` (or double-click `Build App.command`): builds `/Applications/Claude Bar.app` (no Dock icon, no Terminal), ad-hoc signed.
+- `./make-signing-cert.sh` (run once): makes the self-signed certificate "Claude Bar Local Signing" in its own keychain `~/Library/Keychains/claude-bar-signing.keychain-db`. `build-app.sh` signs with it when it exists (ad-hoc otherwise), so the designated requirement is the same for every build and Screen Recording stays granted.
 - Before rebuilding, quit the running copy (menu bar ✳ > Quit, or `pkill -f "Claude Bar"`). The app is single-instance, so an old copy silently blocks a new one.
 - Config lives at `~/Library/Application Support/claude-chatbar/config.json`. `configVersion` drives one-off migrations in `loadConfig()`; bump it when changing defaults people already have saved.
 
@@ -23,7 +24,7 @@ It has two engines, switched at the top left and saved as `engine`. **Quick** ru
 ## Behavior decisions already made
 - Small bar first; after the first message it becomes a FIXED-size chat window (`chatHeight` 520). It never grows with the conversation; only dragging changes it. Size is remembered. "New" returns to the small bar.
 - The window reappears where it was hidden (`lastBounds`).
-- Half-transparent using native vibrancy; `prefers-reduced-transparency` makes it solid.
+- Half-transparent using native vibrancy (card tint `--bg` alpha .3, text box `--field` .64); `prefers-reduced-transparency` makes it solid.
 - Claude.ai sending: `?q=` up to 6,000 encoded characters, otherwise `execCommand('insertText')` into the box. Enter is pressed once more only if the same text is still in the box after 2.5 s. With the screen locked (window cannot take focus) Enter on the first page of a new panel was lost; with the window focused it worked. If that happens the text simply stays in the box.
 - Quick replaces Claude Code's prompt with `--system-prompt` (`DEFAULT_PROMPT`, date, About you, web and connector notes). Measured for one short message: about 61,000 tokens of context before, under 1,000 after with no tools.
 - Claude.ai mode never reads the Claude app's login or calls private claude.ai APIs; it is only the site in a panel, signed in by the person using it. Do not change this. Sign-in guidance is "Continue with email": Google refuses or fails in embedded windows, and the user agent is deliberately not faked.
@@ -41,6 +42,7 @@ It has two engines, switched at the top left and saved as `engine`. **Quick** ru
 - Interactive views: Claude outputs one self-contained HTML document in a ```widget fence. It is mounted only when the message is complete, inside `<iframe sandbox="allow-scripts" src="widget.html">`. widget.html has its own CSP (no network) and receives the HTML by postMessage. Height is measured from `document.body.scrollHeight` (using documentElement causes a growth feedback loop).
 - Always on top: level `screen-saver` + `levelBoost`. Default boost 2147482627 = level 2147483627. The old default, the maximum (2147483631, kCGMaximumWindowLevel), covered a third-party input method's candidate windows (measured at 2147483628 and 2147483629); `configVersion` 6 lowers a saved higher value once. Applied AFTER `setVisibleOnAllWorkspaces` (that call can reset the level on macOS), re-asserted on show/blur and by a 1 s timer using `moveTop()`.
 - Idle new chat (Quick): `startFreshIfIdle()` runs when the window is shown, and when switching to Quick; if `idleNewChatMinutes` (default 20, 0 = off) have passed since the last message or reply (`lastQuick`) and nothing is running, it calls `newChat()`. The old chat is already in History; unsent text in the box is kept.
+- Invisible bar after sleep: after the Mac slept, the hotkey still reached the app and the window took the keyboard (seen in the system log), but nothing was drawn; only quitting and reopening helped. The cause is NOT known (suspected: the hidden panel ends up registered on another Space). Handling: `suspend`/`resume`/`lock-screen`/`unlock-screen` and display added/removed set `stale`; the next `showBar()` with the window hidden destroys it and builds a new one (`discardWindow()`), keeps the Claude.ai panel (`pane.detach()`), and puts the Quick chat back (`reopen` -> `openSaved`). Tray > Reset window does the same by hand. `note()` writes window events (no chat text) to `userData/bar.log`. Tested only by emitting `resume` in a test app, not with a real sleep.
 - Closing the window only hides it (it is destroyed only on quit); `showBar()` recreates it if it ever is destroyed.
 
 ## Things deliberately NOT done

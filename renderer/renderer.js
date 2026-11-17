@@ -742,6 +742,8 @@ window.bar.onReset((r) => {
   chatMode = false; document.body.classList.remove('chat');
   fit(); input.focus();
 });
+// The window was built again (see showBar in main.js): put the open chat back.
+window.bar.onReopen((id) => { enterChat(); openSaved(id); });
 window.bar.onFocus(() => { input.focus(); input.select(); fit(); });
 window.bar.onNotice((m) => { $('notice').textContent = m; });
 send.innerHTML = icon('up');

@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('bar', {
   onDone: (cb) => on('done', cb),
   onError: (cb) => on('error', cb),
   onReset: (cb) => on('reset', cb),
+  onReopen: (cb) => on('reopen', cb),
   onFocus: (cb) => on('focus-input', cb),
   onNotice: (cb) => on('notice', cb),
   onStatus: (cb) => on('status', cb),

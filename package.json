@@ -1,6 +1,6 @@
 {
   "name": "claude-chatbar",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "description": "Pop-out window for Claude: a floating, always-on-top chat window for macOS, powered by your Claude Code login.",
   "main": "main.js",
   "scripts": {

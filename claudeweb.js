@@ -194,8 +194,15 @@ function createPane({ base = HOME, partition = 'persist:claudeai', radius = 14, 
     return true;
   }
 
+  // Before the window is destroyed and built again: keep the page (and its sign-in) alive.
+  function detach() {
+    if (view && parent && !parent.isDestroyed()) parent.contentView.removeChildView(view);
+    parent = null;
+  }
+
   return {
     attach,
+    detach,
     open,
     ask,
     pressEnterWhenReady,

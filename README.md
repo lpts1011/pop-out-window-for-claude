@@ -105,7 +105,8 @@ pkill -f "Claude Bar"
    inside an embedded app window with "There was an error logging you in". If you normally sign in with Google, enter that
    same Google email address so you reach the same account.
 4. macOS asks for Screen Recording permission the first time you use the screenshot hotkey. Turn on Claude Bar in
-   System Settings > Privacy & Security > Screen Recording. Because the app is ad-hoc signed, macOS may ask again after a rebuild.
+   System Settings > Privacy & Security > Screen Recording. To keep this permission after a rebuild, run
+   `./make-signing-cert.sh` once before building (see Important notes); otherwise the app is ad-hoc signed and macOS asks again.
 
 ## The two modes
 
@@ -208,6 +209,16 @@ An invalid config file is copied to `config.json.bad`, and defaults are used so 
 
 ## Important notes
 
+**Signing and permissions.** `./make-signing-cert.sh` (run once) makes a self-signed certificate, "Claude Bar Local
+Signing", in its own small keychain file (`~/Library/Keychains/claude-bar-signing.keychain-db`). `build-app.sh` signs
+every build with it, so macOS sees each build as the same app and Screen Recording stays granted. Without it the build is
+ad-hoc signed and macOS treats every build as a new app. After switching to the certificate, grant Screen Recording once
+more (see Troubleshooting). The certificate is only for signing on your own Mac; it cannot be used to share the app.
+
+**After sleep.** When the Mac sleeps, the screen locks or a display is added or removed, the bar builds its window again
+the next time you open it. A Quick chat is put back; unsent text in the box is not. Window events (never chat text) are
+written to `bar.log` next to the config file.
+
 **Billing and plan usage**
 
 - In `plan` mode, any `ANTHROPIC_API_KEY` in your environment is deliberately ignored, so you cannot be billed through the API by
@@ -276,8 +287,9 @@ file or chats to a repository.
 | "There was an error logging you in" | Use "Continue with email", not Google |
 | The new build does not appear | An old copy is still running. Quit it from ✳ > Quit or run `pkill -f "Claude Bar"`, then rebuild |
 | The hotkey does nothing | Another app may own it. Change `shortcut` in the config file |
+| The hotkey seems to work (your window loses focus) but the bar is not visible, often after the Mac slept | Choose ✳ > **Reset window**, which builds the window again without quitting. `bar.log` next to the config file shows what happened |
 | The hotkey only removes focus from your current window, or switches you to another desktop or full-screen app | Update to the latest version. If it still happens, choose ✳ > Quit, then open the app again |
-| The screenshot hotkey fails, or macOS keeps asking for Screen Recording although the switch is on | The switch belongs to an older build: each rebuild changes the ad-hoc signature. Run `tccutil reset ScreenCapture local.claude-chatbar` in Terminal, press the screenshot hotkey, turn the switch on again, then quit and reopen the app |
+| The screenshot hotkey fails, or macOS keeps asking for Screen Recording although the switch is on | The switch belongs to an older build: each ad-hoc signed rebuild changes the signature (run `./make-signing-cert.sh` once to stop this). Run `tccutil reset ScreenCapture local.claude-chatbar` in Terminal, press the screenshot hotkey, turn the switch on again, then quit and reopen the app |
 | Claude.ai message stays in the box | Press Enter yourself. This can happen when the window cannot take focus |
 | Replies stop | Your plan or monthly credit may have run out. Hover over the usage figure to see when it resets |
 | An old chat restarts with less memory | Its Claude Code session expired, so the saved text was sent to a new session |
@@ -289,6 +301,8 @@ file or chats to a repository.
 - These have only been tested against a local stand-in page, or not yet tested on a real Mac: typing very long messages and pasting
   screenshots into the real Claude.ai site, the ↗ deep link, opening a conversation in the Code tab, and staying above other apps' pop-out windows.
 - Thinking blocks are displayed if Claude Code streams them, but none appeared in testing.
+- Why the bar can become invisible after sleep is not known; rebuilding the window is a workaround, tested only by
+  simulating a wake-up, not with a real sleep.
 - In Claude.ai mode, the automatic Enter can be lost when the window cannot take focus, such as when the screen is locked.
 
 ## Development
@@ -299,6 +313,10 @@ npm test
 
 The tests use plain Node. `claudeweb.test.js` needs `electron` installed by `npm install`. See [`CLAUDE.md`](CLAUDE.md) for
 architecture, design decisions and safe testing instructions.
+
+## Versions
+
+See [CHANGELOG.md](CHANGELOG.md) and the GitHub releases page for every published version.
 
 ## License
 

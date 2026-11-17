@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, shell, nativeImage, nativeTheme, clipboard } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, shell, nativeImage, nativeTheme, clipboard, powerMonitor } = require('electron');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -77,6 +77,19 @@ const workDir = () => path.join(app.getPath('userData'), 'Claude Bar');
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
+// A short diary of window events (never any chat text), kept in bar.log next to the config file.
+// It is there to explain a bar that does not appear.
+function note(what, data) {
+  try {
+    const file = path.join(app.getPath('userData'), 'bar.log');
+    try { if (fs.statSync(file).size > 200000) fs.renameSync(file, file + '.old'); } catch (_) {}
+    fs.appendFileSync(file, JSON.stringify({ t: new Date().toISOString(), what, ...data }) + '\n');
+  } catch (_) {}
+}
+const windowState = () => (alive()
+  ? { visible: win.isVisible(), focused: win.isFocused(), bounds: win.getBounds(), mode, displays: screen.getAllDisplays().map((d) => d.workArea) }
+  : { window: 'none' });
+
 function loadConfig() {
   try {
     const saved = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
@@ -144,7 +157,7 @@ function applyTheme() {
 }
 
 function createWindow() {
-  win = new BrowserWindow({
+  const w = win = new BrowserWindow({
     width: config.width,
     height: 96,
     show: false,
@@ -173,7 +186,7 @@ function createWindow() {
   applyLevel(); // after the line above: on macOS that call can reset the window level
   // Closing the bar (e.g. Cmd+W) only hides it; it is destroyed only when the app quits.
   win.on('close', (e) => { if (!quitting) { e.preventDefault(); win.hide(); } });
-  win.on('closed', () => { win = null; });
+  win.on('closed', () => { if (win === w) win = null; });
   win.webContents.on('render-process-gone', () => {
     if (!alive() || quitting) return;
     // The page starts empty again, so start a clean chat. The old one is still in History.
@@ -313,12 +326,38 @@ function restoreOrPosition() {
   else positionWindow();
 }
 
+// After the Mac sleeps, the screen locks or a display changes, a window that was hidden can come
+// back invisible: it takes the keyboard but nothing is drawn where you are (seen 2026-11-17).
+// Quitting and reopening always cured it, so the next time the bar is shown after such an event
+// the hidden window is thrown away and built again. The open chat is put back.
+let stale = false;
+let reopening = false;
+function discardWindow() {
+  if (!alive() || running) return false;
+  if (win.isVisible()) lastBounds = win.getBounds();
+  if (pane) pane.detach();
+  const old = win;
+  win = null;
+  old.destroy();
+  return true;
+}
+
 function showBar() {
+  if (stale && alive() && !win.isVisible() && discardWindow()) note('rebuilt');
+  stale = false;
   const fresh = !alive();
   if (fresh) createWindow(); // recreate if it was ever destroyed
   const go = () => {
     if (!alive()) return;
-    if (!win.isVisible()) {
+    if (fresh && lastBounds) {
+      // a rebuilt window: same size and place as the one it replaces
+      setMode(mode);
+      if (onScreen(lastBounds)) win.setBounds(lastBounds);
+      else positionWindow();
+      startFreshIfIdle();
+      if (chatId && config.engine === 'quick') { reopening = true; sendToWin('reopen', chatId); }
+      else { sessionId = null; chatId = null; lastQuick = 0; if (!paneShowing()) setMode('compact'); }
+    } else if (!win.isVisible()) {
       restoreOrPosition();
       startFreshIfIdle(); // after positioning: the small bar keeps the chat window's bottom edge
     }
@@ -336,6 +375,7 @@ function showBar() {
     applyTheme();
     if (paneShowing()) pane.focus();
     else win.webContents.send('focus-input');
+    note('show', { fresh, ...windowState() });
   };
   if (fresh) win.webContents.once('did-finish-load', go);
   else go();
@@ -413,6 +453,8 @@ function createTray() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Show chat bar', click: showBar },
+      // if the bar ever fails to appear: builds its window again without quitting
+      { label: 'Reset window', click: () => { hideBar(); stale = true; showBar(); } },
       { label: 'New chat', click: () => newChat() },
       { label: 'Screenshot and ask', click: screenshot },
       { type: 'separator' },
@@ -609,7 +651,8 @@ ipcMain.handle('open-chat', (_e, id) => {
   running = null;
   chatId = chat.id;
   sessionId = chat.sessionId;
-  lastQuick = Date.now();
+  if (reopening) reopening = false; // the same chat on a rebuilt window: its idle clock keeps running
+  else lastQuick = Date.now();
   setMode('chat');
   return { messages: chat.messages, hasSession: !!sessionId };
 });
@@ -719,6 +762,13 @@ else {
     createWindow();
     createTray();
     registerShortcut();
+    for (const ev of ['suspend', 'resume', 'lock-screen', 'unlock-screen']) {
+      powerMonitor.on(ev, () => { stale = true; note(ev, windowState()); });
+    }
+    for (const ev of ['display-added', 'display-removed']) {
+      screen.on(ev, () => { stale = true; note(ev, windowState()); });
+    }
+    note('start', { version: app.getVersion() });
     win.webContents.once('did-finish-load', showBar);
   });
   app.on('before-quit', () => {

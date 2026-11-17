@@ -9,14 +9,14 @@
   --sans: "Anthropic Sans", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
   --serif: "Anthropic Serif", Georgia, "PingFang SC", serif;
   --fg: #141413; --fg2: #3d3d3a; --muted: #73726c;
-  --bg: rgba(250,249,245,.42); --solid: #fff; --field: rgba(255,255,255,.72);
+  --bg: rgba(250,249,245,.3); --solid: #fff; --field: rgba(255,255,255,.64);
   --bubble: rgba(20,20,19,.07); --hover: rgba(20,20,19,.06); --line: rgba(20,20,19,.13);
   --brand: #c6613f; --accent: #1a66b2; --accent-bg: rgba(26,102,178,.11); --danger: #b53333;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --fg: #faf9f5; --fg2: #c2c0b6; --muted: #9c9a92;
-    --bg: rgba(38,38,36,.42); --solid: #30302e; --field: rgba(48,48,46,.72);
+    --bg: rgba(38,38,36,.3); --solid: #30302e; --field: rgba(48,48,46,.64);
     --bubble: rgba(250,249,245,.1); --hover: rgba(250,249,245,.08); --line: rgba(250,249,245,.16);
     --brand: #d97757; --accent: #6fa8dc; --accent-bg: rgba(111,168,220,.16); --danger: #e57373;
   }
